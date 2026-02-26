@@ -71,7 +71,7 @@ export default function App() {
         if (savedSessions) setSessions(JSON.parse(savedSessions));
       }
     }
-  }, []);
+  }, []); 
 
   useEffect(() => {
     localStorage.setItem('attendance_base_url', customBaseUrl);
