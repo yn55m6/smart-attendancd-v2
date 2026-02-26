@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Camera, FileText, CheckCircle, XCircle, Users, FileBarChart, 
   Trash2, QrCode, Smartphone, LogIn, LogOut, ChevronRight, 
-  ClipboardList, UserPlus, CalendarDays, BarChart3, ListOrdered
+  ClipboardList, UserPlus, CalendarDays, BarChart3
 } from 'lucide-react';
 
 const TIME_SLOTS = ['오전', '오후', '저녁'];
@@ -266,359 +266,365 @@ export default function App() {
   // ---- 로그인 전 화면 ----
   if (!isLoggedIn) {
     return (
-      <div className="w-full h-[100dvh] max-w-md mx-auto bg-slate-900 flex flex-col justify-center px-6 relative sm:border-x sm:border-slate-800 shadow-2xl">
-        <div className="bg-white p-8 rounded-[32px] shadow-2xl w-full">
-          <div className="w-16 h-16 bg-blue-600 text-white rounded-[20px] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/30">
-            <ClipboardList className="w-8 h-8" />
+      <div className="fixed inset-0 bg-slate-200 flex justify-center items-center sm:p-4">
+        {/* 모바일 화면을 PC에서도 고정시키는 가상의 스마트폰 프레임 */}
+        <div className="w-full h-full sm:w-[390px] sm:h-[844px] sm:max-h-[90vh] bg-slate-900 relative sm:rounded-[40px] sm:shadow-2xl overflow-hidden sm:border-[8px] border-slate-800 flex flex-col justify-center px-6">
+          <div className="bg-white p-8 rounded-[32px] shadow-2xl w-full">
+            <div className="w-16 h-16 bg-blue-600 text-white rounded-[20px] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/30">
+              <ClipboardList className="w-8 h-8" />
+            </div>
+            <h1 className="text-2xl font-black text-slate-900 mb-1 text-center tracking-tight">출석 관리 시스템</h1>
+            <p className="text-slate-500 text-sm mb-8 text-center font-medium">관리자 전용 로그인</p>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <input 
+                type="text" value={inputClassId} onChange={(e) => setInputClassId(e.target.value)} 
+                placeholder="명부 이름 입력 (예: class-1)" 
+                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:bg-white font-bold text-center transition-all" autoFocus 
+              />
+              <button type="submit" className="w-full bg-blue-600 active:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2">
+                <LogIn className="w-5 h-5" /> 접속하기
+              </button>
+            </form>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 mb-1 text-center tracking-tight">출석 관리 시스템</h1>
-          <p className="text-slate-500 text-sm mb-8 text-center font-medium">관리자 전용 로그인</p>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <input 
-              type="text" value={inputClassId} onChange={(e) => setInputClassId(e.target.value)} 
-              placeholder="명부 이름 입력 (예: class-1)" 
-              className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-blue-500 focus:bg-white font-bold text-center transition-all" autoFocus 
-            />
-            <button type="submit" className="w-full bg-blue-600 active:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2">
-              <LogIn className="w-5 h-5" /> 접속하기
-            </button>
-          </form>
         </div>
       </div>
     );
   }
 
-  // ---- 메인 화면 (모바일 앱 레이아웃) ----
+  // ---- 메인 화면 (모바일 프레임 레이아웃) ----
   return (
-    <div className="w-full h-[100dvh] max-w-md mx-auto bg-slate-50 text-slate-900 flex flex-col relative sm:border-x sm:border-slate-200 shadow-2xl overflow-hidden font-sans">
-      
-      {/* 모달 */}
-      {modal.isOpen && (
-        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-6">
-          <div className="bg-white rounded-[28px] p-6 w-full shadow-2xl transform transition-all">
-            <h3 className="text-lg font-black mb-2 text-slate-800">{modal.title}</h3>
-            <p className="text-slate-500 mb-6 font-medium text-sm whitespace-pre-wrap">{modal.text}</p>
-            {modal.type === 'prompt' && (
-              <input type="text" value={promptVal} onChange={e => setPromptVal(e.target.value)} className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl mb-6 outline-none font-bold focus:border-blue-500" placeholder="이름 입력" autoFocus />
-            )}
-            <div className="flex gap-3">
-              <button onClick={() => { setModal({ isOpen: false }); setPromptVal(""); }} className="flex-1 py-3.5 bg-slate-100 text-slate-600 font-black rounded-xl active:bg-slate-200">취소</button>
-              <button onClick={() => { modal.action(promptVal); setModal({ isOpen: false }); setPromptVal(""); }} className={`flex-1 py-3.5 text-white font-black rounded-xl shadow-md ${modal.type === 'confirm' ? 'bg-red-600 active:bg-red-700' : 'bg-blue-600 active:bg-blue-700'}`}>확인</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 토스트 */}
-      {statusMsg.text && (
-        <div className="absolute top-6 left-0 right-0 z-[100] flex justify-center px-4 animate-in fade-in slide-in-from-top-4">
-          <div className={`px-5 py-3.5 rounded-full shadow-lg flex items-center justify-center gap-2 text-sm font-black border ${statusMsg.type === 'error' ? 'bg-white border-red-200 text-red-600' : 'bg-slate-800 text-white border-slate-700'}`}>
-            <span>{statusMsg.text}</span>
-          </div>
-        </div>
-      )}
-
-      {/* 회원 전용 스마트폰 뷰 (QR로 접속 시 보이는 화면) */}
-      {viewMode === 'member' ? (
-        <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
-          <header className="bg-blue-600 text-white pt-12 pb-6 px-6 rounded-b-[32px] shadow-md relative shrink-0">
-            <button onClick={() => setViewMode('admin')} className="absolute top-6 right-6 p-2 bg-white/20 rounded-full">
-              <LogOut className="w-5 h-5" />
-            </button>
-            <Smartphone className="w-10 h-10 mb-3 opacity-90" />
-            <h1 className="text-2xl font-black">{qrSession.day} {qrSession.slot}반</h1>
-            <p className="text-blue-200 text-sm mt-1 font-medium">본인 이름을 터치하여 출석하세요</p>
-          </header>
-          
-          <div className="flex-1 overflow-y-auto p-6 space-y-3 pb-safe">
-            {members.length === 0 ? (
-              <p className="text-center text-slate-400 py-10 font-bold">명단이 없습니다.</p>
-            ) : (
-              members.map(m => {
-                const isDone = (sessions[`${new Date().toISOString().split('T')[0]}_${qrSession.slot}`]?.presentIds || []).includes(m.id);
-                return (
-                  <button key={m.id} onClick={() => handleSelfCheckIn(m.id, m.name)} className={`w-full p-4.5 rounded-[20px] font-black flex justify-between items-center transition-all border-2 active:scale-[0.98] ${isDone ? 'bg-blue-50 border-blue-400 text-blue-800' : 'bg-white border-slate-200 text-slate-700'}`}>
-                    <span className="text-lg">{m.name}</span>
-                    {isDone ? <span className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full shadow-sm">출석완료</span> : <ChevronRight className="w-5 h-5 text-slate-300" />}
-                  </button>
-                );
-              })
-            )}
-            <button onClick={openSelfRegistrationModal} className="w-full mt-4 py-4.5 bg-slate-200 text-slate-700 rounded-[20px] font-black flex items-center justify-center gap-2 active:bg-slate-300">
-              <UserPlus className="w-5 h-5" /> 명단에 없으신가요?
-            </button>
-          </div>
-        </div>
-      ) : (
-        /* 관리자 앱 뷰 */
-        <>
-          {/* 상단 앱 헤더 */}
-          <header className="bg-white pt-6 pb-3 px-5 flex justify-between items-center shrink-0 shadow-sm z-10 relative">
-            <div>
-              <h2 className="text-xl font-black tracking-tight text-slate-900">출석 관리자</h2>
-              <div className="flex items-center gap-1 mt-0.5">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                <p className="text-[11px] font-black text-slate-400 uppercase">{classId}</p>
+    <div className="fixed inset-0 bg-slate-200 flex justify-center items-center sm:p-4">
+      {/* 모바일 화면을 PC에서도 고정시키는 가상의 스마트폰 프레임 */}
+      <div className="w-full h-full sm:w-[390px] sm:h-[844px] sm:max-h-[90vh] bg-slate-50 text-slate-900 relative sm:rounded-[40px] sm:shadow-2xl overflow-hidden sm:border-[8px] border-slate-800 flex flex-col font-sans">
+        
+        {/* 모달 (전체화면 고정이 아닌 스마트폰 프레임 내부에 고정) */}
+        {modal.isOpen && (
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-6">
+            <div className="bg-white rounded-[28px] p-6 w-full shadow-2xl transform transition-all">
+              <h3 className="text-lg font-black mb-2 text-slate-800">{modal.title}</h3>
+              <p className="text-slate-500 mb-6 font-medium text-sm whitespace-pre-wrap">{modal.text}</p>
+              {modal.type === 'prompt' && (
+                <input type="text" value={promptVal} onChange={e => setPromptVal(e.target.value)} className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl mb-6 outline-none font-bold focus:border-blue-500" placeholder="이름 입력" autoFocus />
+              )}
+              <div className="flex gap-3">
+                <button onClick={() => { setModal({ isOpen: false }); setPromptVal(""); }} className="flex-1 py-3.5 bg-slate-100 text-slate-600 font-black rounded-xl active:bg-slate-200">취소</button>
+                <button onClick={() => { modal.action(promptVal); setModal({ isOpen: false }); setPromptVal(""); }} className={`flex-1 py-3.5 text-white font-black rounded-xl shadow-md ${modal.type === 'confirm' ? 'bg-red-600 active:bg-red-700' : 'bg-blue-600 active:bg-blue-700'}`}>확인</button>
               </div>
             </div>
-            <button onClick={() => { setClassId(""); setIsLoggedIn(false); }} className="p-2.5 bg-slate-100 text-slate-500 rounded-full active:bg-slate-200">
-              <LogOut className="w-5 h-5" />
-            </button>
-          </header>
+          </div>
+        )}
 
-          {/* 메인 스크롤 영역 */}
-          <main className="flex-1 overflow-y-auto bg-slate-50 p-5 pb-24">
+        {/* 토스트 (스마트폰 프레임 상단에 고정) */}
+        {statusMsg.text && (
+          <div className="absolute top-6 left-0 right-0 z-[100] flex justify-center px-4 animate-in fade-in slide-in-from-top-4">
+            <div className={`px-5 py-3.5 rounded-full shadow-lg flex items-center justify-center gap-2 text-sm font-black border ${statusMsg.type === 'error' ? 'bg-white border-red-200 text-red-600' : 'bg-slate-800 text-white border-slate-700'}`}>
+              <span>{statusMsg.text}</span>
+            </div>
+          </div>
+        )}
+
+        {/* 회원 전용 스마트폰 뷰 (QR로 접속 시 보이는 화면) */}
+        {viewMode === 'member' ? (
+          <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden relative">
+            <header className="bg-blue-600 text-white pt-12 pb-6 px-6 rounded-b-[32px] shadow-md relative shrink-0">
+              <button onClick={() => setViewMode('admin')} className="absolute top-6 right-6 p-2 bg-white/20 rounded-full">
+                <LogOut className="w-5 h-5" />
+              </button>
+              <Smartphone className="w-10 h-10 mb-3 opacity-90" />
+              <h1 className="text-2xl font-black">{qrSession.day} {qrSession.slot}반</h1>
+              <p className="text-blue-200 text-sm mt-1 font-medium">본인 이름을 터치하여 출석하세요</p>
+            </header>
             
-            {/* 1. 출석 탭 */}
-            {activeTab === 'attendance' && (
-              <div className="space-y-5 animate-in fade-in">
-                {/* 날짜/시간 선택 */}
-                <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-100 flex gap-2">
-                  <input type="date" value={currentDate} onChange={(e) => setCurrentDate(e.target.value)} className="w-1/2 bg-slate-50 border-none p-3 rounded-xl font-black text-sm text-center outline-none" />
-                  <div className="w-1/2 flex bg-slate-50 p-1 rounded-xl">
-                    {availableSlots.length > 0 ? (
-                      availableSlots.map(slot => (
-                        <button key={slot} onClick={() => setCurrentSlot(slot)} className={`flex-1 rounded-lg text-xs font-black transition-all ${currentSlot === slot ? 'bg-white text-blue-600 shadow-sm border border-slate-200/50' : 'text-slate-400'}`}>
-                          {slot}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="flex-1 flex items-center justify-center text-xs font-black text-red-400 bg-red-50 rounded-lg">휴일</div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-3 pb-safe">
+              {members.length === 0 ? (
+                <p className="text-center text-slate-400 py-10 font-bold">명단이 없습니다.</p>
+              ) : (
+                members.map(m => {
+                  const isDone = (sessions[`${new Date().toISOString().split('T')[0]}_${qrSession.slot}`]?.presentIds || []).includes(m.id);
+                  return (
+                    <button key={m.id} onClick={() => handleSelfCheckIn(m.id, m.name)} className={`w-full p-4.5 rounded-[20px] font-black flex justify-between items-center transition-all border-2 active:scale-[0.98] ${isDone ? 'bg-blue-50 border-blue-400 text-blue-800' : 'bg-white border-slate-200 text-slate-700'}`}>
+                      <span className="text-lg">{m.name}</span>
+                      {isDone ? <span className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full shadow-sm">출석완료</span> : <ChevronRight className="w-5 h-5 text-slate-300" />}
+                    </button>
+                  );
+                })
+              )}
+              <button onClick={openSelfRegistrationModal} className="w-full mt-4 py-4.5 bg-slate-200 text-slate-700 rounded-[20px] font-black flex items-center justify-center gap-2 active:bg-slate-300">
+                <UserPlus className="w-5 h-5" /> 명단에 없으신가요?
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* 관리자 앱 뷰 */
+          <>
+            {/* 상단 앱 헤더 */}
+            <header className="bg-white pt-6 pb-3 px-5 flex justify-between items-center shrink-0 shadow-sm z-10 relative">
+              <div>
+                <h2 className="text-xl font-black tracking-tight text-slate-900">출석 관리자</h2>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                  <p className="text-[11px] font-black text-slate-400 uppercase">{classId}</p>
+                </div>
+              </div>
+              <button onClick={() => { setClassId(""); setIsLoggedIn(false); }} className="p-2.5 bg-slate-100 text-slate-500 rounded-full active:bg-slate-200">
+                <LogOut className="w-5 h-5" />
+              </button>
+            </header>
+
+            {/* 메인 스크롤 영역 (하단 탭 공간 확보를 위해 pb-24 적용) */}
+            <main className="flex-1 overflow-y-auto bg-slate-50 p-5 pb-24 relative">
+              
+              {/* 1. 출석 탭 */}
+              {activeTab === 'attendance' && (
+                <div className="space-y-5 animate-in fade-in">
+                  {/* 날짜/시간 선택 */}
+                  <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-100 flex gap-2">
+                    <input type="date" value={currentDate} onChange={(e) => setCurrentDate(e.target.value)} className="w-1/2 bg-slate-50 border-none p-3 rounded-xl font-black text-sm text-center outline-none" />
+                    <div className="w-1/2 flex bg-slate-50 p-1 rounded-xl">
+                      {availableSlots.length > 0 ? (
+                        availableSlots.map(slot => (
+                          <button key={slot} onClick={() => setCurrentSlot(slot)} className={`flex-1 rounded-lg text-xs font-black transition-all ${currentSlot === slot ? 'bg-white text-blue-600 shadow-sm border border-slate-200/50' : 'text-slate-400'}`}>
+                            {slot}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center text-xs font-black text-red-400 bg-red-50 rounded-lg">휴일</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {availableSlots.length === 0 ? (
+                    <div className="bg-white p-10 rounded-[24px] shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
+                      <CalendarDays className="w-12 h-12 text-slate-300 mb-3" />
+                      <h3 className="font-black text-slate-500">일요일은 휴무입니다</h3>
+                      <p className="text-sm text-slate-400 mt-1">출석을 관리하지 않는 요일입니다.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* 출석 현황 */}
+                      <div className="bg-white p-5 rounded-[24px] shadow-sm border border-slate-100">
+                        <div className="flex justify-between items-center mb-5">
+                          <h3 className="font-black text-base flex items-center gap-2"><CheckCircle className="w-5 h-5 text-blue-500"/> 출석 명단</h3>
+                          <button onClick={resetCurrentSession} className="text-[11px] text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full font-bold">초기화</button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {members.map(m => {
+                            const isP = (sessions[`${currentDate}_${currentSlot}`]?.presentIds || []).includes(m.id);
+                            return (
+                              <button key={m.id} onClick={() => {
+                                const curP = sessions[`${currentDate}_${currentSlot}`]?.presentIds || [];
+                                updateAttendance(currentDate, currentSlot, isP ? curP.filter(id => id !== m.id) : [...curP, m.id]);
+                              }} className={`p-3.5 rounded-[16px] border-2 flex items-center gap-2.5 active:scale-95 transition-all text-left ${isP ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-slate-100 bg-white text-slate-400'}`}>
+                                {isP ? <CheckCircle className="w-5 h-5 text-blue-600 shrink-0"/> : <div className="w-5 h-5 rounded-full border-2 border-slate-200 shrink-0"/>} 
+                                <span className="font-black text-sm truncate">{m.name}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 텍스트 스캔 */}
+                      <div className="bg-white p-5 rounded-[24px] shadow-sm border border-slate-100">
+                        <h3 className="font-black mb-3 flex items-center gap-2 text-sm"><Camera className="w-4 h-4 text-blue-500"/> 카톡 스캔</h3>
+                        <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="명단 복사/붙여넣기" className="w-full h-24 bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-medium outline-none mb-3 resize-none focus:border-blue-300" />
+                        <button onClick={analyzeAndIngest} className="w-full py-3.5 bg-slate-900 text-white font-black rounded-xl active:bg-black">스캔 적용하기</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* 2. 명단 관리 탭 */}
+              {activeTab === 'management' && (
+                <div className="animate-in fade-in space-y-4">
+                  <div className="bg-white p-5 rounded-[24px] shadow-sm border border-slate-100">
+                    <h3 className="font-black text-base mb-4">회원 추가</h3>
+                    <div className="flex gap-2">
+                      <input id="newMemInput" type="text" placeholder="이름 입력" className="flex-1 bg-slate-50 border border-slate-100 py-3.5 px-4 rounded-xl text-sm font-bold outline-none focus:border-blue-400" />
+                      <button onClick={() => { const el = document.getElementById('newMemInput'); if(addMember(el.value)){ showStatus("추가됨", "success"); el.value="";} }} className="bg-blue-600 text-white px-5 rounded-xl font-black text-sm shrink-0"><UserPlus className="w-5 h-5"/></button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-2 rounded-[24px] shadow-sm border border-slate-100">
+                    {members.map(m => (
+                      <div key={m.id} className="flex justify-between items-center p-4 border-b border-slate-50 last:border-0">
+                        <span className="font-black text-slate-800">{m.name}</span>
+                        <button onClick={() => confirmDeleteMember(m.id, m.name)} className="p-2 text-slate-300 active:text-red-500"><Trash2 className="w-5 h-5"/></button>
+                      </div>
+                    ))}
+                    {members.length === 0 && <p className="text-center py-8 text-slate-400 font-bold text-sm">명단이 비어있습니다.</p>}
+                  </div>
+                </div>
+              )}
+
+              {/* 3. 통계 탭 */}
+              {activeTab === 'report' && (
+                <div className="animate-in fade-in space-y-4 h-full flex flex-col">
+                  {/* 월 선택 및 리포트 타입 탭 */}
+                  <div className="bg-white p-4 rounded-[24px] shadow-sm border border-slate-100 space-y-4 shrink-0">
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-black flex items-center gap-2"><CalendarDays className="w-5 h-5 text-blue-600"/> 기간 선택</h3>
+                      <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-slate-50 border-none p-2 rounded-lg text-sm font-black outline-none" />
+                    </div>
+                    
+                    {/* 세부 탭 */}
+                    <div className="flex bg-slate-100 p-1 rounded-xl">
+                      <button onClick={() => setReportType('summary')} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${reportType === 'summary' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>요약</button>
+                      <button onClick={() => setReportType('individual')} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${reportType === 'individual' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>개인별</button>
+                      <button onClick={() => setReportType('daily')} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${reportType === 'daily' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>일자별</button>
+                    </div>
+                  </div>
+
+                  {/* 리포트 내용 영역 */}
+                  <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex-1 p-4">
+                    {/* A. 월별 차수 요약 */}
+                    {reportType === 'summary' && (
+                      <div className="space-y-4 animate-in fade-in">
+                        <h4 className="font-black text-slate-800 border-b pb-2 mb-4 text-sm"><BarChart3 className="inline w-4 h-4 mr-1 text-blue-500"/> 월간 차수별 총 출석 인원</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {['오전', '오후', '저녁'].map(slot => (
+                            <div key={slot} className="bg-slate-50 p-4 rounded-2xl text-center border border-slate-100">
+                              <p className="text-xs font-black text-slate-500 mb-1">{slot}</p>
+                              <p className="text-xl font-black text-blue-600">{statsData.summary[slot]}<span className="text-xs text-slate-400 ml-0.5">명</span></p>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="bg-blue-600 text-white p-4 rounded-2xl flex justify-between items-center mt-2 shadow-md">
+                          <span className="font-black text-sm">월간 누적 총합</span>
+                          <span className="text-2xl font-black">{statsData.summary.총합}명</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* B. 개인별 통계 */}
+                    {reportType === 'individual' && (
+                      <div className="animate-in fade-in">
+                        <div className="overflow-x-auto rounded-xl border border-slate-100">
+                          <table className="w-full text-left text-xs whitespace-nowrap min-w-max">
+                            <thead className="bg-slate-50">
+                              <tr>
+                                <th className="py-3 px-3 font-black text-slate-600">이름</th>
+                                <th className="py-3 text-center text-slate-400">오전</th>
+                                <th className="py-3 text-center text-slate-400">오후</th>
+                                <th className="py-3 text-center text-slate-400">저녁</th>
+                                <th className="py-3 px-3 text-right text-blue-600 font-black">총합</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {statsData.individual.map(i => (
+                                <tr key={i.id}>
+                                  <td className="py-3 px-3 font-black text-slate-800">{i.name}</td>
+                                  <td className="py-3 text-center font-medium text-slate-400">{i.오전}</td>
+                                  <td className="py-3 text-center font-medium text-slate-400">{i.오후}</td>
+                                  <td className="py-3 text-center font-medium text-slate-400">{i.저녁}</td>
+                                  <td className="py-3 px-3 text-right text-blue-600 font-black">{i.total}</td>
+                                </tr>
+                              ))}
+                              {statsData.individual.length === 0 && <tr><td colSpan="5" className="text-center py-6 text-slate-400">데이터 없음</td></tr>}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* C. 일자별 상세 명단 */}
+                    {reportType === 'daily' && (
+                      <div className="space-y-4 animate-in fade-in">
+                        {statsData.daily.length === 0 ? (
+                          <p className="text-center py-6 text-slate-400 font-bold text-sm">출석 기록이 없습니다.</p>
+                        ) : (
+                          statsData.daily.map((dayData, idx) => (
+                            <div key={idx} className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                              <h5 className="font-black text-slate-800 mb-3 text-sm">{dayData.date}</h5>
+                              <div className="space-y-3">
+                                {['오전', '오후', '저녁'].map(slot => {
+                                  const names = dayData.slots[slot];
+                                  if (!names || names.length === 0) return null;
+                                  return (
+                                    <div key={slot} className="flex gap-3 text-sm">
+                                      <span className="font-black text-blue-600 shrink-0 w-8">{slot}</span>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {names.map((n, i) => (
+                                          <span key={i} className="bg-white border border-slate-200 px-2 py-0.5 rounded-md font-bold text-slate-600 text-xs">{n}</span>
+                                        ))}
+                                        <span className="text-xs text-slate-400 self-center ml-1">({names.length}명)</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
+              )}
 
-                {availableSlots.length === 0 ? (
-                  <div className="bg-white p-10 rounded-[24px] shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
-                    <CalendarDays className="w-12 h-12 text-slate-300 mb-3" />
-                    <h3 className="font-black text-slate-500">일요일은 휴무입니다</h3>
-                    <p className="text-sm text-slate-400 mt-1">출석을 관리하지 않는 요일입니다.</p>
+              {/* 4. 회원/QR 탭 (QR코드 발행 기능) */}
+              {activeTab === 'templates' && (
+                <div className="animate-in fade-in space-y-4">
+                  {/* 배포 URL 설정 영역 */}
+                  <div className="bg-blue-50 p-5 rounded-[24px] border border-blue-100 flex flex-col gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="bg-blue-600 p-2.5 rounded-full text-white shrink-0"><QrCode className="w-5 h-5"/></div>
+                      <div>
+                        <h3 className="font-black text-blue-900 text-base mb-0.5">배포 URL 설정</h3>
+                        <p className="text-blue-700 text-xs font-medium">현재 사용 중인 배포 주소를 입력해야 스캔 시 스마트폰으로 정상 연결됩니다.</p>
+                      </div>
+                    </div>
+                    <input type="text" value={customBaseUrl} onChange={(e) => setCustomBaseUrl(e.target.value)} placeholder="https://...vercel.app" className="w-full bg-white border border-blue-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-blue-500 transition-colors" />
                   </div>
-                ) : (
-                  <>
-                    {/* 출석 현황 */}
-                    <div className="bg-white p-5 rounded-[24px] shadow-sm border border-slate-100">
-                      <div className="flex justify-between items-center mb-5">
-                        <h3 className="font-black text-base flex items-center gap-2"><CheckCircle className="w-5 h-5 text-blue-500"/> 출석 명단</h3>
-                        <button onClick={resetCurrentSession} className="text-[11px] text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full font-bold">초기화</button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2.5">
-                        {members.map(m => {
-                          const isP = (sessions[`${currentDate}_${currentSlot}`]?.presentIds || []).includes(m.id);
-                          return (
-                            <button key={m.id} onClick={() => {
-                              const curP = sessions[`${currentDate}_${currentSlot}`]?.presentIds || [];
-                              updateAttendance(currentDate, currentSlot, isP ? curP.filter(id => id !== m.id) : [...curP, m.id]);
-                            }} className={`p-3.5 rounded-[16px] border-2 flex items-center gap-2.5 active:scale-95 transition-all text-left ${isP ? 'border-blue-500 bg-blue-50 text-blue-800' : 'border-slate-100 bg-white text-slate-400'}`}>
-                              {isP ? <CheckCircle className="w-5 h-5 text-blue-600 shrink-0"/> : <div className="w-5 h-5 rounded-full border-2 border-slate-200 shrink-0"/>} 
-                              <span className="font-black text-sm truncate">{m.name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
 
-                    {/* 텍스트 스캔 */}
-                    <div className="bg-white p-5 rounded-[24px] shadow-sm border border-slate-100">
-                      <h3 className="font-black mb-3 flex items-center gap-2 text-sm"><Camera className="w-4 h-4 text-blue-500"/> 카톡 스캔</h3>
-                      <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="명단 복사/붙여넣기" className="w-full h-24 bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm font-medium outline-none mb-3 resize-none focus:border-blue-300" />
-                      <button onClick={analyzeAndIngest} className="w-full py-3.5 bg-slate-900 text-white font-black rounded-xl active:bg-black">스캔 적용하기</button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* 2. 명단 관리 탭 */}
-            {activeTab === 'management' && (
-              <div className="animate-in fade-in space-y-4">
-                <div className="bg-white p-5 rounded-[24px] shadow-sm border border-slate-100">
-                  <h3 className="font-black text-base mb-4">회원 추가</h3>
-                  <div className="flex gap-2">
-                    <input id="newMemInput" type="text" placeholder="이름 입력" className="flex-1 bg-slate-50 border border-slate-100 py-3.5 px-4 rounded-xl text-sm font-bold outline-none focus:border-blue-400" />
-                    <button onClick={() => { const el = document.getElementById('newMemInput'); if(addMember(el.value)){ showStatus("추가됨", "success"); el.value="";} }} className="bg-blue-600 text-white px-5 rounded-xl font-black text-sm shrink-0"><UserPlus className="w-5 h-5"/></button>
-                  </div>
-                </div>
-
-                <div className="bg-white p-2 rounded-[24px] shadow-sm border border-slate-100">
-                  {members.map(m => (
-                    <div key={m.id} className="flex justify-between items-center p-4 border-b border-slate-50 last:border-0">
-                      <span className="font-black text-slate-800">{m.name}</span>
-                      <button onClick={() => confirmDeleteMember(m.id, m.name)} className="p-2 text-slate-300 active:text-red-500"><Trash2 className="w-5 h-5"/></button>
-                    </div>
-                  ))}
-                  {members.length === 0 && <p className="text-center py-8 text-slate-400 font-bold text-sm">명단이 비어있습니다.</p>}
-                </div>
-              </div>
-            )}
-
-            {/* 3. 통계 탭 */}
-            {activeTab === 'report' && (
-              <div className="animate-in fade-in space-y-4 h-full flex flex-col">
-                {/* 월 선택 및 리포트 타입 탭 */}
-                <div className="bg-white p-4 rounded-[24px] shadow-sm border border-slate-100 space-y-4 shrink-0">
-                  <div className="flex justify-between items-center">
-                    <h3 className="font-black flex items-center gap-2"><CalendarDays className="w-5 h-5 text-blue-600"/> 기간 선택</h3>
-                    <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-slate-50 border-none p-2 rounded-lg text-sm font-black outline-none" />
-                  </div>
-                  
-                  {/* 세부 탭 */}
-                  <div className="flex bg-slate-100 p-1 rounded-xl">
-                    <button onClick={() => setReportType('summary')} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${reportType === 'summary' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>요약</button>
-                    <button onClick={() => setReportType('individual')} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${reportType === 'individual' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>개인별</button>
-                    <button onClick={() => setReportType('daily')} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${reportType === 'daily' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>일자별</button>
-                  </div>
-                </div>
-
-                {/* 리포트 내용 영역 */}
-                <div className="bg-white rounded-[24px] shadow-sm border border-slate-100 flex-1 p-4">
-                  {/* A. 월별 차수 요약 */}
-                  {reportType === 'summary' && (
-                    <div className="space-y-4 animate-in fade-in">
-                      <h4 className="font-black text-slate-800 border-b pb-2 mb-4 text-sm"><BarChart3 className="inline w-4 h-4 mr-1 text-blue-500"/> 월간 차수별 총 출석 인원</h4>
-                      <div className="grid grid-cols-3 gap-2">
-                        {['오전', '오후', '저녁'].map(slot => (
-                          <div key={slot} className="bg-slate-50 p-4 rounded-2xl text-center border border-slate-100">
-                            <p className="text-xs font-black text-slate-500 mb-1">{slot}</p>
-                            <p className="text-xl font-black text-blue-600">{statsData.summary[slot]}<span className="text-xs text-slate-400 ml-0.5">명</span></p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="bg-blue-600 text-white p-4 rounded-2xl flex justify-between items-center mt-2 shadow-md">
-                        <span className="font-black text-sm">월간 누적 총합</span>
-                        <span className="text-2xl font-black">{statsData.summary.총합}명</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* B. 개인별 통계 */}
-                  {reportType === 'individual' && (
-                    <div className="animate-in fade-in">
-                      <div className="overflow-hidden rounded-xl border border-slate-100">
-                        <table className="w-full text-left text-xs whitespace-nowrap">
-                          <thead className="bg-slate-50">
-                            <tr>
-                              <th className="py-3 px-3 font-black text-slate-600">이름</th>
-                              <th className="py-3 text-center text-slate-400">오전</th>
-                              <th className="py-3 text-center text-slate-400">오후</th>
-                              <th className="py-3 text-center text-slate-400">저녁</th>
-                              <th className="py-3 px-3 text-right text-blue-600 font-black">총합</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {statsData.individual.map(i => (
-                              <tr key={i.id}>
-                                <td className="py-3 px-3 font-black text-slate-800">{i.name}</td>
-                                <td className="py-3 text-center font-medium text-slate-400">{i.오전}</td>
-                                <td className="py-3 text-center font-medium text-slate-400">{i.오후}</td>
-                                <td className="py-3 text-center font-medium text-slate-400">{i.저녁}</td>
-                                <td className="py-3 px-3 text-right text-blue-600 font-black">{i.total}</td>
-                              </tr>
-                            ))}
-                            {statsData.individual.length === 0 && <tr><td colSpan="5" className="text-center py-6 text-slate-400">데이터 없음</td></tr>}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* C. 일자별 상세 명단 */}
-                  {reportType === 'daily' && (
-                    <div className="space-y-4 animate-in fade-in">
-                      {statsData.daily.length === 0 ? (
-                        <p className="text-center py-6 text-slate-400 font-bold text-sm">출석 기록이 없습니다.</p>
-                      ) : (
-                        statsData.daily.map((dayData, idx) => (
-                          <div key={idx} className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                            <h5 className="font-black text-slate-800 mb-3 text-sm">{dayData.date}</h5>
-                            <div className="space-y-3">
-                              {['오전', '오후', '저녁'].map(slot => {
-                                const names = dayData.slots[slot];
-                                if (!names || names.length === 0) return null;
-                                return (
-                                  <div key={slot} className="flex gap-3 text-sm">
-                                    <span className="font-black text-blue-600 shrink-0 w-8">{slot}</span>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {names.map((n, i) => (
-                                        <span key={i} className="bg-white border border-slate-200 px-2 py-0.5 rounded-md font-bold text-slate-600 text-xs">{n}</span>
-                                      ))}
-                                      <span className="text-xs text-slate-400 self-center ml-1">({names.length}명)</span>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                  {/* 요일별 차수별 QR코드 생성 격자 (토요일 오후만, 일요일 제외) */}
+                  <div className="grid grid-cols-1 gap-4">
+                    {['월요일', '화요일', '수요일', '목요일', '금요일', '토요일'].map(day => (
+                      <div key={day} className="bg-white p-5 rounded-[24px] border border-slate-200 shadow-sm">
+                        <h4 className="font-black text-base mb-4 border-l-4 border-blue-600 pl-3 text-slate-800">{day} 수업</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {SCHEDULE_CONFIG[day].map(slot => (
+                            <div key={slot} className="flex flex-col items-center justify-center bg-slate-50 border border-slate-100 p-4 rounded-[20px] transition-all hover:bg-slate-100">
+                              <span className="font-black text-sm text-slate-600 mb-3 bg-white px-3 py-1 rounded-full shadow-sm">{slot}반</span>
+                              
+                              {/* QR 코드 이미지 (URL 자동 파싱) */}
+                              <img src={getQRUrl(day, slot)} alt={`${day} ${slot} QR`} className="w-24 h-24 mb-3 rounded-xl bg-white p-2 shadow-sm" />
+                              
+                              <button onClick={() => { setQrSession({ day, slot }); setViewMode('member'); window.scrollTo(0,0); }} className="w-full text-xs bg-slate-900 hover:bg-black text-white px-3 py-2.5 rounded-xl font-black transition-colors flex items-center justify-center gap-1.5">
+                                <Smartphone className="w-4 h-4"/> 미리보기
+                              </button>
                             </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* 4. 회원/QR 탭 (QR코드 발행 기능) */}
-            {activeTab === 'templates' && (
-              <div className="animate-in fade-in space-y-4">
-                {/* 배포 URL 설정 영역 */}
-                <div className="bg-blue-50 p-5 rounded-[24px] border border-blue-100 flex flex-col gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="bg-blue-600 p-2.5 rounded-full text-white shrink-0"><QrCode className="w-5 h-5"/></div>
-                    <div>
-                      <h3 className="font-black text-blue-900 text-base mb-0.5">배포 URL 설정</h3>
-                      <p className="text-blue-700 text-xs font-medium">현재 사용 중인 배포 주소를 입력해야 스캔 시 스마트폰으로 정상 연결됩니다.</p>
-                    </div>
-                  </div>
-                  <input type="text" value={customBaseUrl} onChange={(e) => setCustomBaseUrl(e.target.value)} placeholder="https://...vercel.app" className="w-full bg-white border border-blue-200 p-3 rounded-xl text-sm font-bold outline-none focus:border-blue-500 transition-colors" />
-                </div>
-
-                {/* 요일별 차수별 QR코드 생성 격자 (토요일 오후만, 일요일 제외) */}
-                <div className="grid grid-cols-1 gap-4">
-                  {['월요일', '화요일', '수요일', '목요일', '금요일', '토요일'].map(day => (
-                    <div key={day} className="bg-white p-5 rounded-[24px] border border-slate-200 shadow-sm">
-                      <h4 className="font-black text-base mb-4 border-l-4 border-blue-600 pl-3 text-slate-800">{day} 수업</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        {SCHEDULE_CONFIG[day].map(slot => (
-                          <div key={slot} className="flex flex-col items-center justify-center bg-slate-50 border border-slate-100 p-4 rounded-[20px] transition-all hover:bg-slate-100">
-                            <span className="font-black text-sm text-slate-600 mb-3 bg-white px-3 py-1 rounded-full shadow-sm">{slot}반</span>
-                            
-                            {/* QR 코드 이미지 (URL 자동 파싱) */}
-                            <img src={getQRUrl(day, slot)} alt={`${day} ${slot} QR`} className="w-28 h-28 mb-3 rounded-xl bg-white p-2 shadow-sm" />
-                            
-                            <button onClick={() => { setQrSession({ day, slot }); setViewMode('member'); window.scrollTo(0,0); }} className="w-full text-xs bg-slate-900 hover:bg-black text-white px-3 py-2.5 rounded-xl font-black transition-colors flex items-center justify-center gap-1.5">
-                              <Smartphone className="w-4 h-4"/> 미리보기
-                            </button>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </main>
-
-          {/* 하단 네비게이션 바 */}
-          <nav className="absolute bottom-0 w-full bg-white border-t border-slate-100 flex justify-around items-center px-2 pb-6 pt-3 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] z-50">
-            {[
-              { id: 'attendance', icon: CheckCircle, label: '출석' },
-              { id: 'management', icon: Users, label: '명단' },
-              { id: 'report', icon: BarChart3, label: '통계' },
-              { id: 'templates', icon: QrCode, label: 'QR발행' }
-            ].map(tab => {
-              const isActive = activeTab === tab.id;
-              return (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center justify-center w-16 gap-1 transition-colors ${isActive ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-                  <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-blue-50' : ''}`}>
-                    <tab.icon className={`w-6 h-6 ${isActive ? 'fill-blue-100' : ''}`} />
+                    ))}
                   </div>
-                  <span className={`text-[10px] font-black ${isActive ? 'text-blue-700' : ''}`}>{tab.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </>
-      )}
+                </div>
+              )}
+            </main>
+
+            {/* 하단 네비게이션 바 (모바일 프레임 하단에 고정) */}
+            <nav className="absolute bottom-0 w-full bg-white border-t border-slate-100 flex justify-around items-center px-2 pb-6 pt-3 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] z-50">
+              {[
+                { id: 'attendance', icon: CheckCircle, label: '출석' },
+                { id: 'management', icon: Users, label: '명단' },
+                { id: 'report', icon: BarChart3, label: '통계' },
+                { id: 'templates', icon: QrCode, label: 'QR발행' }
+              ].map(tab => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center justify-center w-16 gap-1 transition-colors ${isActive ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
+                    <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-blue-50' : ''}`}>
+                      <tab.icon className={`w-6 h-6 ${isActive ? 'fill-blue-100' : ''}`} />
+                    </div>
+                    <span className={`text-[10px] font-black ${isActive ? 'text-blue-700' : ''}`}>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </>
+        )}
+      </div>
     </div>
   );
 }
