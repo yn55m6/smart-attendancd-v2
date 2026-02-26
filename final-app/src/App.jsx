@@ -84,6 +84,41 @@ export default function App() {
     if (availableSlots.length > 0 && !availableSlots.includes(currentSlot)) setCurrentSlot(availableSlots[0]);
   }, [currentDate, currentSlot, availableSlots]);
 
+  // 스캔 처리 기능 (복구됨)
+  const analyzeAndIngest = () => {
+    if (!inputText.trim()) {
+      showStatus("텍스트를 먼저 입력해주세요.", "error");
+      return;
+    }
+    const found = inputText.match(/[가-힣]{2,4}/g) || [];
+    const uniqueFound = Array.from(new Set(found)).filter(n => !EXCLUDED_WORDS.includes(n));
+    
+    let currentMembers = [...members];
+    let matchedIds = [];
+
+    uniqueFound.forEach(name => {
+      let member = currentMembers.find(m => m.name === name);
+      if (!member) {
+        member = { id: `m_${Date.now()}_${Math.random()}`, name };
+        currentMembers.push(member);
+      }
+    });
+
+    setMembers(currentMembers.sort((a, b) => a.name.localeCompare(b.name)));
+
+    const normalizedText = inputText.replace(/\s+/g, '');
+    currentMembers.forEach(m => {
+      if (normalizedText.includes(m.name)) matchedIds.push(m.id);
+    });
+
+    const sessionId = `${currentDate}_${currentSlot}`;
+    const existingIds = sessions[sessionId]?.presentIds || [];
+    updateAttendance(currentDate, currentSlot, Array.from(new Set([...existingIds, ...matchedIds])));
+    
+    setInputText(""); 
+    showStatus(`${matchedIds.length}명 일괄 스캔 출석 완료!`, "success");
+  };
+
   const statsData = useMemo(() => {
     const monthlySessions = Object.values(sessions).filter(s => s.date.startsWith(selectedMonth));
     const individual = members.map(m => {
@@ -166,6 +201,7 @@ export default function App() {
             <div className="animate-in fade-in duration-300 space-y-6">
               {activeTab === 'attendance' && (
                 <div className="space-y-6">
+                  {/* 날짜 선택 */}
                   <div className="flex gap-2 p-1.5 bg-slate-100 rounded-3xl">
                     <input type="date" value={currentDate} onChange={(e) => setCurrentDate(e.target.value)} className="flex-1 bg-white border-none p-4 rounded-2xl font-black text-sm text-center outline-none shadow-sm" />
                     <div className="flex-1 flex gap-1 p-1 bg-white/50 rounded-2xl">
@@ -174,21 +210,44 @@ export default function App() {
                       )) : <div className="flex-1 flex items-center justify-center text-[10px] font-black text-red-400">일요일 휴무</div>}
                     </div>
                   </div>
+                  
                   {availableSlots.length > 0 && (
-                    <div className="grid grid-cols-2 gap-3">
-                      {members.map(m => {
-                        const isP = (sessions[`${currentDate}_${currentSlot}`]?.presentIds || []).includes(m.id);
-                        return (
-                          <button key={m.id} onClick={() => {
-                            const curP = sessions[`${currentDate}_${currentSlot}`]?.presentIds || [];
-                            updateAttendance(currentDate, currentSlot, isP ? curP.filter(id => id !== m.id) : [...curP, m.id]);
-                          }} className={`p-5 rounded-[28px] border-2 flex flex-col items-center gap-3 transition-all active:scale-95 ${isP ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md' : 'border-slate-50 bg-slate-50 text-slate-300'}`}>
-                            {isP ? <CheckCircle className="w-8 h-8 text-blue-600" /> : <div className="w-8 h-8 rounded-full border-4 border-slate-200" />}
-                            <span className="font-black text-sm">{m.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <>
+                      {/* 수동 출석 영역 */}
+                      <div className="grid grid-cols-2 gap-3">
+                        {members.map(m => {
+                          const isP = (sessions[`${currentDate}_${currentSlot}`]?.presentIds || []).includes(m.id);
+                          return (
+                            <button key={m.id} onClick={() => {
+                              const curP = sessions[`${currentDate}_${currentSlot}`]?.presentIds || [];
+                              updateAttendance(currentDate, currentSlot, isP ? curP.filter(id => id !== m.id) : [...curP, m.id]);
+                            }} className={`p-5 rounded-[28px] border-2 flex flex-col items-center gap-3 transition-all active:scale-95 ${isP ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md' : 'border-slate-50 bg-slate-50 text-slate-300'}`}>
+                              {isP ? <CheckCircle className="w-8 h-8 text-blue-600" /> : <div className="w-8 h-8 rounded-full border-4 border-slate-200" />}
+                              <span className="font-black text-sm">{m.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* 텍스트/카톡 스캔 영역 (복구 완료) */}
+                      <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 mt-6">
+                        <h3 className="font-black mb-4 flex items-center gap-2 text-sm text-slate-800">
+                          <Camera className="w-5 h-5 text-blue-500"/> 카톡/텍스트 일괄 스캔
+                        </h3>
+                        <textarea 
+                          value={inputText} 
+                          onChange={(e) => setInputText(e.target.value)} 
+                          placeholder="명단을 복사해서 여기에 붙여넣으세요. 이름만 쏙 뽑아서 일괄 출석 처리됩니다." 
+                          className="w-full h-28 bg-slate-50 border border-slate-100 rounded-2xl p-4 text-sm font-medium outline-none mb-4 resize-none focus:border-blue-300 transition-colors shadow-inner" 
+                        />
+                        <button 
+                          onClick={analyzeAndIngest} 
+                          className="w-full py-4 bg-slate-900 active:bg-black text-white font-black rounded-2xl active:scale-95 transition-transform shadow-md flex items-center justify-center gap-2"
+                        >
+                          <Camera className="w-4 h-4"/> 텍스트 스캔 및 일괄 적용
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
               )}
@@ -214,8 +273,60 @@ export default function App() {
                           </div>
                         ))}
                       </div>
+                    ) : reportType === 'individual' ? (
+                      <div className="overflow-x-auto rounded-xl">
+                        <table className="w-full text-left text-xs whitespace-nowrap min-w-max bg-white rounded-2xl overflow-hidden shadow-sm">
+                          <thead className="bg-slate-100">
+                            <tr>
+                              <th className="py-3 px-4 font-black text-slate-600">이름</th>
+                              <th className="py-3 text-center text-slate-400">오전</th>
+                              <th className="py-3 text-center text-slate-400">오후</th>
+                              <th className="py-3 text-center text-slate-400">저녁</th>
+                              <th className="py-3 px-4 text-right text-blue-600 font-black">총합</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50">
+                            {statsData.individual.map(i => (
+                              <tr key={i.id}>
+                                <td className="py-4 px-4 font-black text-slate-800">{i.name}</td>
+                                <td className="py-4 text-center font-medium text-slate-400">{i.오전}</td>
+                                <td className="py-4 text-center font-medium text-slate-400">{i.오후}</td>
+                                <td className="py-4 text-center font-medium text-slate-400">{i.저녁}</td>
+                                <td className="py-4 px-4 text-right text-blue-600 font-black text-sm">{i.total}</td>
+                              </tr>
+                            ))}
+                            {statsData.individual.length === 0 && <tr><td colSpan="5" className="text-center py-6 text-slate-400">데이터 없음</td></tr>}
+                          </tbody>
+                        </table>
+                      </div>
                     ) : (
-                      <p className="text-center text-slate-300 py-20 font-black">데이터 로드 중...</p>
+                      <div className="space-y-4">
+                        {statsData.daily.length === 0 ? (
+                          <p className="text-center py-10 text-slate-400 font-bold">출석 기록이 없습니다.</p>
+                        ) : (
+                          statsData.daily.map((dayData, idx) => (
+                            <div key={idx} className="bg-white rounded-3xl p-5 shadow-sm">
+                              <h5 className="font-black text-slate-800 mb-4 text-sm border-b pb-2">{dayData.date}</h5>
+                              <div className="space-y-3">
+                                {['오전', '오후', '저녁'].map(slot => {
+                                  const names = dayData.slots[slot];
+                                  if (!names || names.length === 0) return null;
+                                  return (
+                                    <div key={slot} className="flex gap-3 text-sm">
+                                      <span className="font-black text-blue-500 shrink-0 w-8">{slot}</span>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {names.map((n, i) => (
+                                          <span key={i} className="bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg font-bold text-slate-600 text-[11px]">{n}</span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
