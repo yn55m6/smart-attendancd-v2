@@ -9,6 +9,15 @@ const TIME_SLOTS = ['오전', '오후', '저녁'];
 const DAYS_KR = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 const EXCLUDED_WORDS = ['출석', '결석', '지각', '오전', '오후', '저녁', '요일', '명단'];
 
+// 한국 시간(브라우저 로컬 시간) 기준 YYYY-MM-DD 반환 함수
+const getLocalDateString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const SCHEDULE_CONFIG = {
   '일요일': [],
   '월요일': ['오전', '오후', '저녁'],
@@ -27,12 +36,12 @@ export default function App() {
   const [sessions, setSessions] = useState({});
   const [statusMsg, setStatusMsg] = useState({ text: "", type: "" });
   const [activeTab, setActiveTab] = useState('attendance');
-  const [currentDate, setCurrentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [currentDate, setCurrentDate] = useState(getLocalDateString());
   const [currentSlot, setCurrentSlot] = useState('오전');
   const [inputText, setInputText] = useState("");
   const [viewMode, setViewMode] = useState('admin'); 
   const [qrSession, setQrSession] = useState(null); 
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7));
+  const [selectedMonth, setSelectedMonth] = useState(getLocalDateString().substring(0, 7));
   const [reportType, setReportType] = useState('summary'); 
   const [customBaseUrl, setCustomBaseUrl] = useState(() => localStorage.getItem('attendance_base_url') || "");
   const [modal, setModal] = useState({ isOpen: false, type: '', title: '', text: '', action: null });
@@ -77,6 +86,57 @@ export default function App() {
     setSessions(prev => ({ ...prev, [sessionId]: { id: sessionId, date, slot, presentIds } }));
   };
 
+  const addMember = (name) => {
+    if (!name.trim()) return null;
+    if (members.some(m => m.name === name.trim())) {
+      showStatus("이미 등록된 이름입니다.", "error");
+      return null;
+    }
+    const newMember = { id: `m_${Date.now()}`, name: name.trim() };
+    setMembers(prev => [...prev, newMember].sort((a, b) => a.name.localeCompare(b.name)));
+    return newMember;
+  };
+
+  const confirmDeleteMember = (memberId, memberName) => {
+    const hasRecord = Object.values(sessions).some(session => session.presentIds?.includes(memberId));
+    if (hasRecord) { 
+      showStatus(`'${memberName}' 회원은 출석 기록이 존재하여 삭제할 수 없습니다.`, "error"); 
+      return; 
+    }
+    setModal({ 
+      isOpen: true, type: 'confirm', title: '회원 삭제', text: `'${memberName}'님을 삭제하시겠습니까?`, 
+      action: () => {
+        setMembers(prev => prev.filter(m => m.id !== memberId));
+        showStatus("삭제되었습니다.", "success");
+      }
+    });
+  };
+
+  const resetCurrentSession = () => {
+    const sessionId = `${currentDate}_${currentSlot}`;
+    if (!sessions[sessionId]?.presentIds?.length) return showStatus("지울 데이터가 없습니다.", "info");
+    
+    setModal({ 
+      isOpen: true, type: 'confirm', title: '출석 초기화', text: '현재 반의 출석을 모두 초기화합니다.', 
+      action: () => { updateAttendance(currentDate, currentSlot, []); showStatus("초기화 됨", "success"); }
+    });
+  };
+
+  const openSelfRegistrationModal = () => {
+    setModal({ 
+      isOpen: true, type: 'prompt', title: '신규 회원 등록', text: '명단에 없습니다.\n성함을 입력해 주세요.', 
+      action: (name) => {
+        const newMem = addMember(name);
+        if (newMem) {
+          const today = getLocalDateString();
+          const curP = sessions[`${today}_${qrSession.slot}`]?.presentIds || [];
+          updateAttendance(today, qrSession.slot, [...curP, newMem.id]);
+          showStatus(`${name}님 환영합니다!`, "success");
+        }
+      }
+    });
+  };
+
   const currentDayName = DAYS_KR[new Date(currentDate).getDay()];
   const availableSlots = SCHEDULE_CONFIG[currentDayName];
 
@@ -84,7 +144,7 @@ export default function App() {
     if (availableSlots.length > 0 && !availableSlots.includes(currentSlot)) setCurrentSlot(availableSlots[0]);
   }, [currentDate, currentSlot, availableSlots]);
 
-  // 스캔 처리 기능 (복구됨)
+  // 스캔 처리 기능
   const analyzeAndIngest = () => {
     if (!inputText.trim()) {
       showStatus("텍스트를 먼저 입력해주세요.", "error");
@@ -140,8 +200,9 @@ export default function App() {
 
   if (!isLoggedIn) {
     return (
-      <div className="fixed inset-0 bg-slate-100 flex justify-center items-center font-sans">
-        <div className="w-full h-full max-w-[430px] bg-slate-900 flex flex-col justify-center px-8 shadow-2xl relative sm:rounded-[40px] sm:max-h-[90vh] overflow-hidden border-[8px] border-slate-800">
+      <div className="fixed inset-0 sm:bg-slate-200 flex justify-center items-center font-sans sm:p-4">
+        {/* 모바일: 100% 꽉 채움 / PC: 둥근 모서리와 아이폰 프레임 적용 */}
+        <div className="w-full h-full sm:w-[390px] sm:h-[844px] sm:max-h-[90vh] bg-slate-900 flex flex-col justify-center px-8 relative sm:rounded-[40px] sm:shadow-2xl overflow-hidden sm:border-[8px] sm:border-slate-800">
           <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full">
             <div className="w-16 h-16 bg-blue-600 text-white rounded-[24px] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/30"><ClipboardList className="w-8 h-8" /></div>
             <h1 className="text-2xl font-black text-slate-900 mb-1 text-center tracking-tighter">회원 출석 시스템</h1>
@@ -157,8 +218,9 @@ export default function App() {
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-100 flex justify-center items-center font-sans overflow-hidden">
-      <div className="w-full h-full max-w-[430px] bg-white flex flex-col relative shadow-2xl sm:rounded-[40px] sm:max-h-[90vh] overflow-hidden border-x-[8px] border-t-[8px] border-slate-800">
+    <div className="fixed inset-0 bg-white sm:bg-slate-200 flex justify-center items-center font-sans overflow-hidden sm:p-4">
+      {/* 모바일: 100% 꽉 채움 / PC: 아이폰 프레임 적용 */}
+      <div className="w-full h-full sm:w-[390px] sm:h-[844px] sm:max-h-[90vh] bg-slate-50 flex flex-col relative sm:shadow-2xl sm:rounded-[40px] overflow-hidden sm:border-[8px] sm:border-slate-800">
         
         {/* 상단 헤더 */}
         <header className="bg-white pt-10 pb-4 px-6 flex justify-between items-center border-b border-slate-100 shrink-0 z-10 shadow-sm">
@@ -174,7 +236,7 @@ export default function App() {
         </header>
 
         {/* 메인 콘텐츠 영역 */}
-        <main className="flex-1 overflow-y-auto bg-white p-6 pb-32">
+        <main className="flex-1 overflow-y-auto bg-slate-50 p-6 pb-32">
           {viewMode === 'member' ? (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="bg-blue-600 p-8 rounded-[40px] text-white shadow-xl shadow-blue-600/20 mb-8">
@@ -183,18 +245,25 @@ export default function App() {
                 <p className="text-blue-100 font-bold opacity-80">성함을 터치하여 출석을 완료하세요.</p>
               </div>
               <div className="space-y-3">
-                {members.map(m => {
-                  const isDone = (sessions[`${new Date().toISOString().split('T')[0]}_${qrSession.slot}`]?.presentIds || []).includes(m.id);
-                  return (
-                    <button key={m.id} onClick={() => {
-                      const today = new Date().toISOString().split('T')[0], sId = `${today}_${qrSession.slot}`, curP = sessions[sId]?.presentIds || [];
-                      if (curP.includes(m.id)) { showStatus("이미 출석되었습니다.", "success"); return; }
-                      updateAttendance(today, qrSession.slot, [...curP, m.id]); showStatus(`${m.name}님 출석 확인!`, "success");
-                    }} className={`w-full p-5 rounded-3xl font-black flex justify-between items-center transition-all border-2 active:scale-95 ${isDone ? 'bg-blue-50 border-blue-400 text-blue-700 shadow-inner' : 'bg-slate-50 border-transparent text-slate-700'}`}>
-                      <span className="text-lg">{m.name}</span>{isDone ? <CheckCircle className="w-6 h-6 text-blue-600" /> : <ChevronRight className="w-5 h-5 text-slate-300" />}
-                    </button>
-                  );
-                })}
+                {members.length === 0 ? (
+                  <p className="text-center text-slate-400 py-10 font-bold">명단이 없습니다.</p>
+                ) : (
+                  members.map(m => {
+                    const isDone = (sessions[`${getLocalDateString()}_${qrSession.slot}`]?.presentIds || []).includes(m.id);
+                    return (
+                      <button key={m.id} onClick={() => {
+                        const today = getLocalDateString(), sId = `${today}_${qrSession.slot}`, curP = sessions[sId]?.presentIds || [];
+                        if (curP.includes(m.id)) { showStatus("이미 출석되었습니다.", "success"); return; }
+                        updateAttendance(today, qrSession.slot, [...curP, m.id]); showStatus(`${m.name}님 출석 확인!`, "success");
+                      }} className={`w-full p-4.5 rounded-[20px] font-black flex justify-between items-center transition-all border-2 active:scale-[0.98] ${isDone ? 'bg-blue-50 border-blue-400 text-blue-800' : 'bg-white border-slate-200 text-slate-700'}`}>
+                        <span className="text-lg">{m.name}</span>{isDone ? <span className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full shadow-sm">출석완료</span> : <ChevronRight className="w-5 h-5 text-slate-300" />}
+                      </button>
+                    );
+                  })
+                )}
+                <button onClick={openSelfRegistrationModal} className="w-full mt-4 py-4.5 bg-slate-200 text-slate-700 rounded-[20px] font-black flex items-center justify-center gap-2 active:bg-slate-300">
+                  <UserPlus className="w-5 h-5" /> 명단에 없으신가요?
+                </button>
               </div>
             </div>
           ) : (
@@ -221,15 +290,15 @@ export default function App() {
                             <button key={m.id} onClick={() => {
                               const curP = sessions[`${currentDate}_${currentSlot}`]?.presentIds || [];
                               updateAttendance(currentDate, currentSlot, isP ? curP.filter(id => id !== m.id) : [...curP, m.id]);
-                            }} className={`p-5 rounded-[28px] border-2 flex flex-col items-center gap-3 transition-all active:scale-95 ${isP ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md' : 'border-slate-50 bg-slate-50 text-slate-300'}`}>
-                              {isP ? <CheckCircle className="w-8 h-8 text-blue-600" /> : <div className="w-8 h-8 rounded-full border-4 border-slate-200" />}
+                            }} className={`p-5 rounded-[28px] border-2 flex flex-col items-center gap-3 transition-all active:scale-95 ${isP ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-md' : 'border-slate-100 bg-white text-slate-400 shadow-sm'}`}>
+                              {isP ? <CheckCircle className="w-8 h-8 text-blue-600" /> : <div className="w-8 h-8 rounded-full border-4 border-slate-100" />}
                               <span className="font-black text-sm">{m.name}</span>
                             </button>
                           );
                         })}
                       </div>
 
-                      {/* 텍스트/카톡 스캔 영역 (복구 완료) */}
+                      {/* 텍스트/카톡 스캔 영역 */}
                       <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 mt-6">
                         <h3 className="font-black mb-4 flex items-center gap-2 text-sm text-slate-800">
                           <Camera className="w-5 h-5 text-blue-500"/> 카톡/텍스트 일괄 스캔
@@ -254,48 +323,48 @@ export default function App() {
 
               {activeTab === 'report' && (
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center bg-slate-50 p-5 rounded-[32px] border border-slate-100">
+                  <div className="flex justify-between items-center bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm">
                     <h3 className="font-black text-slate-900">출석 통계</h3>
-                    <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-white border-none p-2 rounded-xl text-xs font-black outline-none shadow-sm" />
+                    <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="bg-slate-50 border-none p-2 rounded-xl text-xs font-black outline-none shadow-inner" />
                   </div>
                   <div className="flex gap-1.5 p-1 bg-slate-100 rounded-2xl">
                     {['summary', 'individual', 'daily'].map(t => (
                       <button key={t} onClick={() => setReportType(t)} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all ${reportType === t ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>{t === 'summary' ? '요약' : t === 'individual' ? '개인' : '일자'}</button>
                     ))}
                   </div>
-                  <div className="bg-slate-50 p-6 rounded-[32px] min-h-[300px]">
+                  <div className="min-h-[300px]">
                     {reportType === 'summary' ? (
                       <div className="space-y-4">
                         {['오전', '오후', '저녁'].map(s => (
-                          <div key={s} className="flex justify-between items-center bg-white p-5 rounded-3xl shadow-sm">
+                          <div key={s} className="flex justify-between items-center bg-white p-6 rounded-[32px] shadow-sm border border-slate-50">
                             <span className="font-black text-slate-500">{s}반</span>
-                            <span className="text-xl font-black text-blue-600">{statsData.summary[s]}명</span>
+                            <span className="text-2xl font-black text-blue-600">{statsData.summary[s]}명</span>
                           </div>
                         ))}
                       </div>
                     ) : reportType === 'individual' ? (
-                      <div className="overflow-x-auto rounded-xl">
-                        <table className="w-full text-left text-xs whitespace-nowrap min-w-max bg-white rounded-2xl overflow-hidden shadow-sm">
-                          <thead className="bg-slate-100">
+                      <div className="overflow-x-auto rounded-[24px] shadow-sm bg-white border border-slate-50">
+                        <table className="w-full text-left text-xs whitespace-nowrap min-w-max bg-white overflow-hidden">
+                          <thead className="bg-slate-50 border-b border-slate-100">
                             <tr>
-                              <th className="py-3 px-4 font-black text-slate-600">이름</th>
-                              <th className="py-3 text-center text-slate-400">오전</th>
-                              <th className="py-3 text-center text-slate-400">오후</th>
-                              <th className="py-3 text-center text-slate-400">저녁</th>
-                              <th className="py-3 px-4 text-right text-blue-600 font-black">총합</th>
+                              <th className="py-4 px-5 font-black text-slate-600">이름</th>
+                              <th className="py-4 text-center text-slate-400 font-bold">오전</th>
+                              <th className="py-4 text-center text-slate-400 font-bold">오후</th>
+                              <th className="py-4 text-center text-slate-400 font-bold">저녁</th>
+                              <th className="py-4 px-5 text-right text-blue-600 font-black">총합</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50">
                             {statsData.individual.map(i => (
-                              <tr key={i.id}>
-                                <td className="py-4 px-4 font-black text-slate-800">{i.name}</td>
-                                <td className="py-4 text-center font-medium text-slate-400">{i.오전}</td>
-                                <td className="py-4 text-center font-medium text-slate-400">{i.오후}</td>
-                                <td className="py-4 text-center font-medium text-slate-400">{i.저녁}</td>
-                                <td className="py-4 px-4 text-right text-blue-600 font-black text-sm">{i.total}</td>
+                              <tr key={i.id} className="hover:bg-slate-50 transition-colors">
+                                <td className="py-4 px-5 font-black text-slate-800">{i.name}</td>
+                                <td className="py-4 text-center font-medium text-slate-500">{i.오전}</td>
+                                <td className="py-4 text-center font-medium text-slate-500">{i.오후}</td>
+                                <td className="py-4 text-center font-medium text-slate-500">{i.저녁}</td>
+                                <td className="py-4 px-5 text-right text-blue-600 font-black text-sm">{i.total}</td>
                               </tr>
                             ))}
-                            {statsData.individual.length === 0 && <tr><td colSpan="5" className="text-center py-6 text-slate-400">데이터 없음</td></tr>}
+                            {statsData.individual.length === 0 && <tr><td colSpan="5" className="text-center py-8 text-slate-400 font-bold">데이터 없음</td></tr>}
                           </tbody>
                         </table>
                       </div>
@@ -305,18 +374,18 @@ export default function App() {
                           <p className="text-center py-10 text-slate-400 font-bold">출석 기록이 없습니다.</p>
                         ) : (
                           statsData.daily.map((dayData, idx) => (
-                            <div key={idx} className="bg-white rounded-3xl p-5 shadow-sm">
-                              <h5 className="font-black text-slate-800 mb-4 text-sm border-b pb-2">{dayData.date}</h5>
+                            <div key={idx} className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-50">
+                              <h5 className="font-black text-slate-800 mb-4 text-sm border-b border-slate-100 pb-3">{dayData.date}</h5>
                               <div className="space-y-3">
                                 {['오전', '오후', '저녁'].map(slot => {
                                   const names = dayData.slots[slot];
                                   if (!names || names.length === 0) return null;
                                   return (
-                                    <div key={slot} className="flex gap-3 text-sm">
-                                      <span className="font-black text-blue-500 shrink-0 w-8">{slot}</span>
-                                      <div className="flex flex-wrap gap-1.5">
+                                    <div key={slot} className="flex gap-4 text-sm items-start">
+                                      <span className="font-black text-blue-500 shrink-0 w-8 pt-1">{slot}</span>
+                                      <div className="flex flex-wrap gap-2">
                                         {names.map((n, i) => (
-                                          <span key={i} className="bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg font-bold text-slate-600 text-[11px]">{n}</span>
+                                          <span key={i} className="bg-slate-50 border border-slate-100 px-2.5 py-1.5 rounded-lg font-bold text-slate-600 text-[11px]">{n}</span>
                                         ))}
                                       </div>
                                     </div>
@@ -336,18 +405,18 @@ export default function App() {
                 <div className="space-y-6">
                   <div className="bg-blue-50 p-6 rounded-[32px] border border-blue-100">
                     <h4 className="font-black text-blue-900 text-sm mb-4 flex items-center gap-2"><QrCode className="w-4 h-4" /> 배포 주소 등록</h4>
-                    <input type="text" value={customBaseUrl} onChange={(e) => setCustomBaseUrl(e.target.value)} placeholder="https://~.vercel.app" className="w-full bg-white border-none p-4 rounded-2xl text-xs font-bold outline-none shadow-inner" />
+                    <input type="text" value={customBaseUrl} onChange={(e) => setCustomBaseUrl(e.target.value)} placeholder="https://~.vercel.app" className="w-full bg-white border-none p-4 rounded-2xl text-xs font-bold outline-none shadow-inner text-blue-800" />
                   </div>
                   <div className="grid grid-cols-1 gap-4">
                     {DAYS_KR.map(d => SCHEDULE_CONFIG[d].length > 0 && (
-                      <div key={d} className="bg-slate-50 p-6 rounded-[40px] border border-slate-100">
-                        <h4 className="font-black text-slate-800 mb-5 pl-2 border-l-4 border-blue-600">{d} 수업</h4>
+                      <div key={d} className="bg-white p-6 rounded-[40px] border border-slate-100 shadow-sm">
+                        <h4 className="font-black text-slate-800 mb-5 pl-3 border-l-4 border-blue-600">{d} 수업</h4>
                         <div className="grid grid-cols-2 gap-3">
                           {SCHEDULE_CONFIG[d].map(s => (
-                            <button key={s} onClick={() => { setQrSession({ day: d, slot: s }); setViewMode('member'); }} className="bg-white p-5 rounded-3xl border border-slate-100 flex flex-col items-center gap-3 shadow-sm active:scale-95 transition-transform">
-                              <span className="font-black text-[10px] text-slate-400 bg-slate-50 px-3 py-1 rounded-full">{s}반</span>
-                              <QrCode className="w-10 h-10 text-blue-600" />
-                              <span className="font-black text-[10px] text-blue-600 uppercase">Open View</span>
+                            <button key={s} onClick={() => { setQrSession({ day: d, slot: s }); setViewMode('member'); }} className="bg-slate-50 p-5 rounded-[28px] border border-slate-100 flex flex-col items-center gap-3 shadow-sm active:scale-95 transition-transform hover:bg-slate-100">
+                              <span className="font-black text-[10px] text-slate-500 bg-white px-3 py-1 rounded-full shadow-sm">{s}반</span>
+                              <QrCode className="w-10 h-10 text-blue-600 my-1" />
+                              <span className="font-black text-[10px] text-blue-600 uppercase bg-blue-50 px-3 py-1.5 rounded-xl">미리보기</span>
                             </button>
                           ))}
                         </div>
@@ -360,16 +429,17 @@ export default function App() {
               {activeTab === 'management' && (
                 <div className="space-y-4">
                   <div className="flex gap-2">
-                    <input id="newMem" type="text" placeholder="회원 이름" className="flex-1 bg-slate-50 p-5 rounded-3xl border-none font-black text-sm outline-none shadow-inner" onKeyDown={e => { if(e.key==='Enter'){ const n = e.currentTarget.value; if(n){ setMembers(p => [...p, {id:`m${Date.now()}`, name:n}].sort((a,b)=>a.name.localeCompare(b.name))); e.currentTarget.value=""; showStatus("등록됨", "success"); } } }} />
-                    <button onClick={() => { const el = document.getElementById('newMem'); if(el.value){ setMembers(p => [...p, {id:`m${Date.now()}`, name:el.value}].sort((a,b)=>a.name.localeCompare(b.name))); el.value=""; showStatus("등록됨", "success"); } }} className="bg-slate-900 text-white px-8 rounded-3xl font-black active:scale-90 transition-transform"><UserPlus className="w-6 h-6"/></button>
+                    <input id="newMem" type="text" placeholder="회원 이름" className="flex-1 bg-white p-5 rounded-3xl border border-slate-100 font-black text-sm outline-none shadow-sm focus:border-blue-400 transition-colors" onKeyDown={e => { if(e.key==='Enter'){ const n = e.currentTarget.value; if(n){ setMembers(p => [...p, {id:`m${Date.now()}`, name:n}].sort((a,b)=>a.name.localeCompare(b.name))); e.currentTarget.value=""; showStatus("등록됨", "success"); } } }} />
+                    <button onClick={() => { const el = document.getElementById('newMem'); if(el.value){ setMembers(p => [...p, {id:`m${Date.now()}`, name:el.value}].sort((a,b)=>a.name.localeCompare(b.name))); el.value=""; showStatus("등록됨", "success"); } }} className="bg-slate-900 text-white px-8 rounded-3xl font-black active:scale-90 transition-transform shadow-md"><UserPlus className="w-6 h-6"/></button>
                   </div>
-                  <div className="bg-slate-50 p-3 rounded-[32px]">
+                  <div className="bg-white p-4 rounded-[32px] border border-slate-100 shadow-sm">
                     {members.map(m => (
-                      <div key={m.id} className="flex justify-between items-center p-4 bg-white rounded-2xl mb-2 shadow-sm">
-                        <span className="font-black text-slate-700">{m.name}</span>
-                        <button onClick={() => setMembers(p => p.filter(i => i.id!==m.id))} className="p-2 text-slate-200 hover:text-red-500 transition-colors"><Trash2 className="w-5 h-5"/></button>
+                      <div key={m.id} className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl mb-2 last:mb-0">
+                        <span className="font-black text-slate-700 pl-2">{m.name}</span>
+                        <button onClick={() => setMembers(p => p.filter(i => i.id!==m.id))} className="p-2 bg-white text-slate-300 hover:text-red-500 rounded-xl transition-colors shadow-sm"><Trash2 className="w-4 h-4"/></button>
                       </div>
                     ))}
+                    {members.length === 0 && <p className="text-center py-10 text-slate-400 font-bold">회원이 없습니다.</p>}
                   </div>
                 </div>
               )}
@@ -377,9 +447,9 @@ export default function App() {
           )}
         </main>
 
-        {/* 하단 탭 내비게이션 (관리자 모드일 때만 표시) */}
+        {/* 하단 탭 내비게이션 (관리자 모드일 때만 표시) - 모바일에서 하단 여백 대폭 추가 */}
         {viewMode === 'admin' && (
-          <nav className="absolute bottom-0 w-full bg-white/80 backdrop-blur-lg border-t border-slate-100 flex justify-around items-center px-4 pb-10 pt-4 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+          <nav className="absolute bottom-0 w-full bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center px-4 pb-8 sm:pb-6 pt-3 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
             {[
               { id: 'attendance', icon: CheckCircle, label: '출석' },
               { id: 'management', icon: Users, label: '회원' },
@@ -388,7 +458,7 @@ export default function App() {
             ].map(tab => {
               const isActive = activeTab === tab.id;
               return (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center justify-center w-16 gap-1.5 transition-all ${isActive ? 'text-blue-600 scale-110' : 'text-slate-300 hover:text-slate-500'}`}>
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center justify-center w-16 gap-1.5 transition-all ${isActive ? 'text-blue-600 scale-110' : 'text-slate-400 hover:text-slate-600'}`}>
                   <div className={`p-2 rounded-2xl transition-all ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : ''}`}><tab.icon className="w-5 h-5" /></div>
                   <span className={`text-[9px] font-black tracking-tighter ${isActive ? 'text-blue-600 opacity-100' : 'opacity-0'}`}>{tab.label}</span>
                 </button>
@@ -397,17 +467,14 @@ export default function App() {
           </nav>
         )}
 
-        {/* 토스트 메시지 */}
+        {/* 토스트 메시지 - 모바일 키보드 위로 뜰 수 있도록 위치 조정 */}
         {statusMsg.text && (
-          <div className="absolute bottom-28 left-0 right-0 z-[100] flex justify-center px-6 pointer-events-none">
-            <div className={`px-6 py-4 rounded-3xl shadow-2xl flex items-center justify-center gap-3 text-sm font-black border animate-in slide-in-from-bottom-2 duration-300 ${statusMsg.type === 'error' ? 'bg-white border-red-200 text-red-600' : 'bg-slate-900 text-white border-slate-800'}`}>
+          <div className="absolute top-20 left-0 right-0 z-[100] flex justify-center px-6 pointer-events-none">
+            <div className={`px-6 py-3.5 rounded-full shadow-2xl flex items-center justify-center gap-3 text-sm font-black border animate-in slide-in-from-top-2 duration-300 ${statusMsg.type === 'error' ? 'bg-white border-red-200 text-red-600' : 'bg-slate-900 text-white border-slate-800'}`}>
               <span>{statusMsg.text}</span>
             </div>
           </div>
         )}
-
-        {/* 가상의 홈 버튼 (데코레이션) */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1.5 bg-slate-800 rounded-full z-[60] opacity-20"></div>
       </div>
     </div>
   );
