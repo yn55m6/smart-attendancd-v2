@@ -9,8 +9,14 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 
-const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : "{}";
-const firebaseConfig = JSON.parse(firebaseConfigStr);
+const firebaseConfig = {
+  apiKey: "AIzaSyBeO3VsRM8x7pY9A5tktrUDIZPfCMKGZfQ",
+  authDomain: "smart-attendance-964dc.firebaseapp.com",
+  projectId: "smart-attendance-964dc",
+  storageBucket: "smart-attendance-964dc.firebasestorage.app",
+  messagingSenderId: "409196393524",
+  appId: "1:409196393524:web:f705254e8e62c415488661"
+};
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
