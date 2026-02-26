@@ -1,28 +1,48 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
 
-/* Tailwind 빌드 에러를 우회하기 위한 순수 표준 CSS */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; }
 body {
-  margin: 0;
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto',
-    'Helvetica Neue', sans-serif;
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #f8fafc;
+  color: #0f172a;
+  line-height: 1.4;
 }
 
-* {
-  box-sizing: border-box;
+.container {
+  max-width: 1024px;
+  margin: 0 auto;
+  padding: 16px;
+}
+.flex { display: flex; }
+.grid { display: grid; }
+.center { display:flex; align-items:center; justify-content:center; }
+.mt-4 { margin-top: 1rem; }
+.mb-4 { margin-bottom: 1rem; }
+.p-4 { padding: 1rem; }
+
+.btn {
+  display:inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background:#2563eb;
+  color:#fff;
+  border:none;
+  cursor:pointer;
+  font-weight:500;
+}
+.btn.secondary {
+  background:#e2e8f0; color:#0f172a;
 }
 
-/* 스크롤바 숨기기 (선택사항) */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+.card {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(2,6,23,0.06);
+  padding: 16px;
 }
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
