@@ -198,18 +198,35 @@ export default function App() {
     return { individual, summary, daily: Object.entries(daily).map(([date, slots]) => ({ date, slots })).sort((a, b) => b.date.localeCompare(a.date)) };
   }, [sessions, members, selectedMonth]);
 
+  // ==========================================
+  // 1. 로그인 전 화면 (모바일 100% 최적화)
+  // ==========================================
   if (!isLoggedIn) {
     return (
-      <div className="fixed inset-0 sm:bg-slate-200 flex justify-center items-center font-sans sm:p-4">
-        {/* 모바일: 100% 꽉 채움 / PC: 둥근 모서리와 아이폰 프레임 적용 */}
-        <div className="w-full h-full sm:w-[390px] sm:h-[844px] sm:max-h-[90vh] bg-slate-900 flex flex-col justify-center px-8 relative sm:rounded-[40px] sm:shadow-2xl overflow-hidden sm:border-[8px] sm:border-slate-800">
+      <div className="bg-slate-900 min-h-screen flex justify-center items-center">
+        {/* 모바일 100dvh, PC에서는 max-w-md로 제한 */}
+        <div className="h-[100dvh] w-full max-w-md mx-auto bg-slate-900 flex flex-col justify-center px-8 relative shadow-2xl sm:border-x border-slate-800">
           <div className="bg-white p-10 rounded-[40px] shadow-2xl w-full">
-            <div className="w-16 h-16 bg-blue-600 text-white rounded-[24px] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/30"><ClipboardList className="w-8 h-8" /></div>
+            <div className="w-16 h-16 bg-blue-600 text-white rounded-[24px] flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/30">
+              <ClipboardList className="w-8 h-8" />
+            </div>
             <h1 className="text-2xl font-black text-slate-900 mb-1 text-center tracking-tighter">회원 출석 시스템</h1>
             <p className="text-slate-400 text-sm mb-10 text-center font-bold uppercase tracking-widest">Admin Login</p>
             <form onSubmit={handleLogin} className="space-y-5">
-              <input type="text" value={inputClassId} onChange={(e) => setInputClassId(e.target.value)} placeholder="명부 이름 (예: class-1)" className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl outline-none focus:border-blue-500 focus:bg-white font-black text-center text-lg transition-all" autoFocus />
-              <button type="submit" className="w-full bg-blue-600 active:scale-95 text-white font-black py-5 rounded-3xl shadow-xl shadow-blue-600/20 transition-transform flex items-center justify-center gap-3 text-lg"><LogIn className="w-6 h-6" /> 접속하기</button>
+              <input 
+                type="text" 
+                value={inputClassId} 
+                onChange={(e) => setInputClassId(e.target.value)} 
+                placeholder="명부 이름 (예: class-1)" 
+                className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl outline-none focus:border-blue-500 focus:bg-white font-black text-center text-lg transition-all" 
+                autoFocus 
+              />
+              <button 
+                type="submit" 
+                className="w-full bg-blue-600 active:scale-95 text-white font-black py-5 rounded-3xl shadow-xl shadow-blue-600/20 transition-transform flex items-center justify-center gap-3 text-lg"
+              >
+                <LogIn className="w-6 h-6" /> 접속하기
+              </button>
             </form>
           </div>
         </div>
@@ -217,16 +234,50 @@ export default function App() {
     );
   }
 
+  // ==========================================
+  // 2. 메인 앱 화면 (모바일 100% 최적화)
+  // ==========================================
   return (
-    <div className="fixed inset-0 bg-white sm:bg-slate-200 flex justify-center items-center font-sans overflow-hidden sm:p-4">
-      {/* 모바일: 100% 꽉 채움 / PC: 아이폰 프레임 적용 */}
-      <div className="w-full h-full sm:w-[390px] sm:h-[844px] sm:max-h-[90vh] bg-slate-50 flex flex-col relative sm:shadow-2xl sm:rounded-[40px] overflow-hidden sm:border-[8px] sm:border-slate-800">
+    <div className="bg-slate-200 min-h-screen flex justify-center items-center font-sans">
+      {/* h-[100dvh]: 모바일 브라우저 주소창 이슈를 해결하는 동적 뷰포트 높이
+        w-full max-w-md mx-auto: 모바일에서는 꽉 차게, PC에서는 폰 사이즈로 가운데 정렬
+      */}
+      <div className="h-[100dvh] w-full max-w-md mx-auto bg-slate-50 flex flex-col relative sm:shadow-2xl overflow-hidden sm:border-x border-slate-200">
         
-        {/* 상단 헤더 */}
-        <header className="bg-white pt-10 pb-4 px-6 flex justify-between items-center border-b border-slate-100 shrink-0 z-10 shadow-sm">
+        {/* 모달 */}
+        {modal.isOpen && (
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-6">
+            <div className="bg-white rounded-[28px] p-6 w-full shadow-2xl transform transition-all">
+              <h3 className="text-lg font-black mb-2 text-slate-800">{modal.title}</h3>
+              <p className="text-slate-500 mb-6 font-medium text-sm whitespace-pre-wrap">{modal.text}</p>
+              {modal.type === 'prompt' && (
+                <input type="text" value={promptVal} onChange={e => setPromptVal(e.target.value)} className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl mb-6 outline-none font-bold focus:border-blue-500" placeholder="이름 입력" autoFocus />
+              )}
+              <div className="flex gap-3">
+                <button onClick={() => { setModal({ isOpen: false }); setPromptVal(""); }} className="flex-1 py-3.5 bg-slate-100 text-slate-600 font-black rounded-xl active:bg-slate-200">취소</button>
+                <button onClick={() => { modal.action(promptVal); setModal({ isOpen: false }); setPromptVal(""); }} className={`flex-1 py-3.5 text-white font-black rounded-xl shadow-md ${modal.type === 'confirm' ? 'bg-red-600 active:bg-red-700' : 'bg-blue-600 active:bg-blue-700'}`}>확인</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 토스트 메시지 */}
+        {statusMsg.text && (
+          <div className="absolute top-20 left-0 right-0 z-[100] flex justify-center px-6 pointer-events-none">
+            <div className={`px-6 py-3.5 rounded-full shadow-2xl flex items-center justify-center gap-3 text-sm font-black border animate-in slide-in-from-top-2 duration-300 ${statusMsg.type === 'error' ? 'bg-white border-red-200 text-red-600' : 'bg-slate-900 text-white border-slate-800'}`}>
+              <span>{statusMsg.text}</span>
+            </div>
+          </div>
+        )}
+
+        {/* 상단 헤더 (고정) */}
+        <header className="bg-white pt-6 pb-4 px-6 flex justify-between items-center border-b border-slate-100 shrink-0 z-10 shadow-sm">
           <div>
             <h2 className="text-xl font-black tracking-tight text-slate-900">{viewMode === 'member' ? '회원 출석' : '관리자'}</h2>
-            <div className="flex items-center gap-1.5 mt-0.5"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span><p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{classId}</p></div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{classId}</p>
+            </div>
           </div>
           {viewMode === 'member' ? (
             <button onClick={() => setViewMode('admin')} className="p-3 bg-slate-100 text-slate-600 rounded-2xl active:scale-90 transition-transform"><ChevronLeft className="w-5 h-5" /></button>
@@ -235,8 +286,8 @@ export default function App() {
           )}
         </header>
 
-        {/* 메인 콘텐츠 영역 */}
-        <main className="flex-1 overflow-y-auto bg-slate-50 p-6 pb-32">
+        {/* 메인 스크롤 콘텐츠 영역 (flex-1로 남은 공간 모두 차지, 하단 탭 여백만큼 pb-24 부여) */}
+        <main className="flex-1 overflow-y-auto bg-slate-50 p-6 pb-28 relative">
           {viewMode === 'member' ? (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="bg-blue-600 p-8 rounded-[40px] text-white shadow-xl shadow-blue-600/20 mb-8">
@@ -447,9 +498,9 @@ export default function App() {
           )}
         </main>
 
-        {/* 하단 탭 내비게이션 (관리자 모드일 때만 표시) - 모바일에서 하단 여백 대폭 추가 */}
+        {/* 하단 탭 내비게이션 (절대 위치, 폰 영역 하단에 고정) */}
         {viewMode === 'admin' && (
-          <nav className="absolute bottom-0 w-full bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center px-4 pb-8 sm:pb-6 pt-3 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+          <nav className="absolute bottom-0 left-0 w-full bg-white/90 backdrop-blur-xl border-t border-slate-100 flex justify-around items-center px-4 pb-8 sm:pb-6 pt-3 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
             {[
               { id: 'attendance', icon: CheckCircle, label: '출석' },
               { id: 'management', icon: Users, label: '회원' },
@@ -465,15 +516,6 @@ export default function App() {
               );
             })}
           </nav>
-        )}
-
-        {/* 토스트 메시지 - 모바일 키보드 위로 뜰 수 있도록 위치 조정 */}
-        {statusMsg.text && (
-          <div className="absolute top-20 left-0 right-0 z-[100] flex justify-center px-6 pointer-events-none">
-            <div className={`px-6 py-3.5 rounded-full shadow-2xl flex items-center justify-center gap-3 text-sm font-black border animate-in slide-in-from-top-2 duration-300 ${statusMsg.type === 'error' ? 'bg-white border-red-200 text-red-600' : 'bg-slate-900 text-white border-slate-800'}`}>
-              <span>{statusMsg.text}</span>
-            </div>
-          </div>
         )}
       </div>
     </div>
